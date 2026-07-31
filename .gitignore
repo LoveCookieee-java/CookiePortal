@@ -1,6 +1,11 @@
 # Target directory
 target/
 
+# Maven wrapper
+mvnw
+mvnw.cmd
+.mvn/
+
 # IDE files
 .idea/
 *.iml

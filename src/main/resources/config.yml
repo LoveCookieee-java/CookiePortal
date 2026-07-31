@@ -1,0 +1,127 @@
+# CookiePortal 1.3 - Configuration
+
+# -------------------------------------------------------------------
+# Render Settings
+# -------------------------------------------------------------------
+render:
+  # Enable portal rendering
+  enabled: true
+
+  # Distance (in blocks) to activate portal rendering for nearby players
+  activation-distance: 20
+
+  # How often the portal view updates (1 tick = 1/20s)
+  update-interval-ticks: 2
+
+  # Dimensions of the virtual room rendered behind the portal
+  room-width: 28
+  room-height: 28
+  room-depth: 20
+
+  # Max block change packets updated per cycle to maintain high FPS and prevent lag
+  max-block-changes-per-update: 10000
+
+  # Precision of the player's gaze threshold for rendering (0.0 to 1.0)
+  look-dot-threshold: 0.35
+
+  # Distance to restore normal vanilla portal blocks when moving away
+  restore-vanilla-surface-distance: 20
+
+  # Refresh rate for updating the destination world scene snapshot
+  source-refresh-ticks: 40
+
+# -------------------------------------------------------------------
+# Animation Settings
+# -------------------------------------------------------------------
+animation:
+  # Enable opening and closing animations
+  enabled: true
+
+  # Duration of portal animations in ticks
+  duration-ticks: 24
+
+# -------------------------------------------------------------------
+# Entity Projection
+# -------------------------------------------------------------------
+entities:
+  # Projects real entities from the destination dimension into the portal view.
+  # Local entities located behind the portal frame are hidden from the viewer.
+  enabled: true
+
+  # Maximum entities projected simultaneously per portal
+  maximum-per-portal: 8
+
+# -------------------------------------------------------------------
+# Debug Mode
+# -------------------------------------------------------------------
+# Enable debug messages in server console
+debug: false
+
+# -------------------------------------------------------------------
+# Portal Frame Settings
+# -------------------------------------------------------------------
+portal:
+  # Vanilla Minecraft determines portal destination. This option expands
+  # destination portal frame sizes to match input portal dimensions.
+  match-destination-size: true
+
+# -------------------------------------------------------------------
+# End Portal Preview and Sky Arrival
+# -------------------------------------------------------------------
+end-portal:
+  # Master switch for End Portal features
+  enabled: true
+
+  preview:
+    # Static End diorama projection with parallax camera effect
+    enabled: true
+    activation-distance: 12
+    update-interval-ticks: 2
+    # Virtual depth below the horizontal portal frame (6-12)
+    depth: 9
+    # Particles appear only from this distance onward. Set to 0 to disable.
+    particle-minimum-distance: 7
+
+  sky-arrival:
+    # Preserves vanilla End entry, then positions player above the central End island.
+    enabled: true
+    height-above-ground: 52
+    # 40 ticks = 2 seconds suspended while chunks finish loading
+    hover-ticks: 40
+    descent-speed: 0.42
+    fall-protection-ticks: 80
+
+# -------------------------------------------------------------------
+# Dimension Stacking (Vertical Travel: END -> OVERWORLD -> NETHER)
+# -------------------------------------------------------------------
+dimension-stacking:
+  # Enable vertical world transitions between stacked dimensions
+  enabled: false
+
+  # Cooldown between dimension transitions in milliseconds
+  transition-cooldown-millis: 3000
+
+  worlds:
+    # Empty = first loaded world of that environment type. Specify world name
+    # if using Multiverse or custom multi-world setups.
+    overworld: ""
+    nether: ""
+
+  holes:
+    # Enable bedrock openings for seamless falling transitions
+    enabled: false
+
+    # Probability of bedrock openings per chunk (0.18 = ~18% of chunks)
+    chance-per-chunk: 0.18
+
+    # Shaft radius: 0 = 1-block hole, 1 = 2-block crack at each entrance.
+    radius: 1
+
+  # Preferred arrival height in Nether. Safe column search performed if obstructed.
+  nether-arrival-y: 102
+
+  # Arrival Y-level in Overworld when returning from Nether.
+  overworld-arrival-y: -50
+
+  # Arrival height above Overworld build limit when falling from the End.
+  end-drop-height: 356

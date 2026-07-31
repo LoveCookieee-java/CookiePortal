@@ -1,0 +1,26 @@
+name: CookiePortal
+version: '1.3'
+main: dev.khoa.plugin.cookieportal.CookiePortalPlugin
+description: CookiePortal - packet-only views through vanilla Nether and End portals.
+author: Cookie
+api-version: '1.21'
+load: POSTWORLD
+folia-supported: true
+depend: [packetevents]
+
+commands:
+  cookieportal:
+    description: Reload or inspect CookiePortal.
+    usage: /cookieportal <reload|info>
+    aliases: [cp]
+    permission: cookieportal.admin
+
+permissions:
+  cookieportal.admin:
+    default: op
+  portal.see:
+    description: Allows players to see the Immersive Portal preview.
+    default: op
+  cookieportal.see:
+    description: Alias permission for viewing the Immersive Portal preview.
+    default: op

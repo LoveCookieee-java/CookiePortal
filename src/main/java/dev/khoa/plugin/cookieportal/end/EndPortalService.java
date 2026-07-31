@@ -274,6 +274,7 @@ public final class EndPortalService implements Listener {
       int centerBlockZ = portal.minimumZ() + 1;
       int depthLimit = this.config.previewDepth();
 
+      World endWorld = this.resolveEndWorld();
       for(int depth = 1; depth <= depthLimit; ++depth) {
          int y = portal.y() - depth;
 
@@ -281,7 +282,7 @@ public final class EndPortalService implements Listener {
             for(int offsetZ = -8; offsetZ <= 8; ++offsetZ) {
                Location fakeBlock = new Location(player.getWorld(), (double)(centerBlockX + offsetX), (double)y, (double)(centerBlockZ + offsetZ));
                if (this.rayPassesOpening(eye, fakeBlock, portal)) {
-                  next.put(fakeBlock, this.sceneBlock(offsetX, offsetZ, depth, depthLimit));
+                  next.put(fakeBlock, this.sceneBlock(endWorld, offsetX, offsetZ, depth, depthLimit));
                }
             }
          }
@@ -293,6 +294,15 @@ public final class EndPortalService implements Listener {
          player.spawnParticle(Particle.REVERSE_PORTAL, portal.center(), 2, (double)0.75F, 0.08, (double)0.75F, 0.01);
       }
 
+   }
+
+   private World resolveEndWorld() {
+      for (World world : Bukkit.getWorlds()) {
+         if (world.getEnvironment() == Environment.THE_END) {
+            return world;
+         }
+      }
+      return null;
    }
 
    private boolean rayPassesOpening(Location eye, Location fakeBlock, EndPortalPlane portal) {
@@ -324,29 +334,26 @@ public final class EndPortalService implements Listener {
       }
    }
 
-   private BlockData sceneBlock(int x, int z, int depth, int depthLimit) {
-      if (depth != depthLimit && Math.abs(x) != 8 && Math.abs(z) != 8) {
-         int pillarX = 2;
-         int pillarZ = -2;
-         if (depth == 2 && Math.abs(x - pillarX) <= 1 && Math.abs(z - pillarZ) <= 1) {
-            return x == pillarX && z == pillarZ ? this.endRod : this.ironBars;
-         } else {
-            int surface = this.islandSurfaceDepth(x, z);
-            if (surface < 0) {
-               return this.air;
-            } else if (x == pillarX && z == pillarZ && depth >= 3 && depth < surface) {
-               return this.obsidian;
-            } else if (x == -3 && z == 1 && depth >= 3 && depth < surface) {
-               return this.obsidian;
-            } else if (Math.abs(x) <= 1 && Math.abs(z) <= 1 && depth == Math.max(3, surface - 1)) {
-               return this.bedrock;
-            } else {
-               return depth >= surface && depth < depthLimit ? this.endStone : this.air;
-            }
-         }
-      } else {
+   private BlockData sceneBlock(World endWorld, int x, int z, int depth, int depthLimit) {
+      if (depth == depthLimit || Math.abs(x) == 8 || Math.abs(z) == 8) {
          return this.backdrop;
       }
+      if (endWorld != null) {
+         int sampleY = 68 - depth;
+         if (sampleY >= endWorld.getMinHeight() && sampleY < endWorld.getMaxHeight()) {
+            if (endWorld.isChunkLoaded(x >> 4, z >> 4)) {
+               BlockData realData = endWorld.getBlockAt(x, sampleY, z).getBlockData();
+               if (!realData.getMaterial().isAir()) {
+                  return realData;
+               }
+            }
+         }
+      }
+      int surface = this.islandSurfaceDepth(x, z);
+      if (surface < 0) {
+         return this.air;
+      }
+      return depth >= surface ? this.endStone : this.air;
    }
 
    private int islandSurfaceDepth(int x, int z) {

@@ -84,7 +84,7 @@ end-portal:
 
   sky-arrival:
     # Preserves vanilla End entry, then positions player above the central End island.
-    enabled: true
+    enabled: false
     height-above-ground: 52
     # 40 ticks = 2 seconds suspended while chunks finish loading
     hover-ticks: 40

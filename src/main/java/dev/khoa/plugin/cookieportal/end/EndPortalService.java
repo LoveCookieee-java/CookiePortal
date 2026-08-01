@@ -65,6 +65,8 @@ public final class EndPortalService implements Listener {
    private final BlockData backdrop;
    private volatile EndPortalConfig config;
    private PortalScheduler.Task renderTask;
+   private int cachedExitPortalY = 68;
+   private long lastExitPortalScan = 0L;
 
    public EndPortalService(CookiePortalPlugin plugin) {
       this.air = Material.AIR.createBlockData();
@@ -275,6 +277,10 @@ public final class EndPortalService implements Listener {
       int depthLimit = this.config.previewDepth();
 
       World endWorld = this.resolveEndWorld();
+      if (endWorld != null && !endWorld.isChunkLoaded(0, 0)) {
+         PlatformCompatibility.loadChunk(endWorld, 0, 0);
+      }
+
       for(int depth = 1; depth <= depthLimit; ++depth) {
          int y = portal.y() - depth;
 
@@ -282,7 +288,17 @@ public final class EndPortalService implements Listener {
             for(int offsetZ = -8; offsetZ <= 8; ++offsetZ) {
                Location fakeBlock = new Location(player.getWorld(), (double)(centerBlockX + offsetX), (double)y, (double)(centerBlockZ + offsetZ));
                if (this.rayPassesOpening(eye, fakeBlock, portal)) {
-                  next.put(fakeBlock, this.sceneBlock(endWorld, offsetX, offsetZ, depth, depthLimit));
+                  BlockData blockData = this.sceneBlock(endWorld, offsetX, offsetZ, depth, depthLimit);
+                  boolean isInnerShaft = Math.abs(offsetX) <= 1 && Math.abs(offsetZ) <= 1;
+                  boolean isShaftWall = (Math.abs(offsetX) == 2 && Math.abs(offsetZ) <= 2) || (Math.abs(offsetZ) == 2 && Math.abs(offsetX) <= 2);
+
+                  if (!isInnerShaft && blockData.getMaterial().isAir()) {
+                     if (isShaftWall && depth < depthLimit) {
+                        next.put(fakeBlock, depth == 1 ? this.bedrock : this.endStone);
+                     }
+                  } else {
+                     next.put(fakeBlock, blockData);
+                  }
                }
             }
          }
@@ -334,26 +350,76 @@ public final class EndPortalService implements Listener {
       }
    }
 
+   private int findExitPortalY(World endWorld) {
+      if (endWorld == null) return 68;
+      long now = System.currentTimeMillis();
+      if (now - this.lastExitPortalScan < 5000L) {
+         return this.cachedExitPortalY;
+      }
+      this.lastExitPortalScan = now;
+      if (!endWorld.isChunkLoaded(0, 0)) {
+         return this.cachedExitPortalY;
+      }
+      for (int y = 80; y >= 50; y--) {
+         Material type = endWorld.getBlockAt(0, y, 0).getType();
+         if (type == Material.DRAGON_EGG) {
+            this.cachedExitPortalY = y;
+            return y;
+         }
+      }
+      for (int y = 80; y >= 50; y--) {
+         Material type = endWorld.getBlockAt(0, y, 0).getType();
+         if (type == Material.END_PORTAL || type == Material.BEDROCK) {
+            this.cachedExitPortalY = y + 3;
+            return this.cachedExitPortalY;
+         }
+      }
+      return this.cachedExitPortalY;
+   }
+
    private BlockData sceneBlock(World endWorld, int x, int z, int depth, int depthLimit) {
       if (depth == depthLimit || Math.abs(x) == 8 || Math.abs(z) == 8) {
          return this.backdrop;
       }
-      if (endWorld != null) {
-         int sampleY = 68 - depth;
-         if (sampleY >= endWorld.getMinHeight() && sampleY < endWorld.getMaxHeight()) {
-            if (endWorld.isChunkLoaded(x >> 4, z >> 4)) {
-               BlockData realData = endWorld.getBlockAt(x, sampleY, z).getBlockData();
-               if (!realData.getMaterial().isAir()) {
-                  return realData;
-               }
+
+      int topY = this.findExitPortalY(endWorld);
+      int sampleY = topY - (depth - 1);
+
+      if (endWorld != null && sampleY >= endWorld.getMinHeight() && sampleY < endWorld.getMaxHeight()) {
+         if (endWorld.isChunkLoaded(x >> 4, z >> 4)) {
+            BlockData realData = endWorld.getBlockAt(x, sampleY, z).getBlockData();
+            if (!realData.getMaterial().isAir()) {
+               return realData;
             }
          }
       }
-      int surface = this.islandSurfaceDepth(x, z);
-      if (surface < 0) {
-         return this.air;
+
+      return this.syntheticExitPortalBlock(x, z, depth);
+   }
+
+   private BlockData syntheticExitPortalBlock(int x, int z, int depth) {
+      int absX = Math.abs(x);
+      int absZ = Math.abs(z);
+
+      if (depth == 1 && absX == 0 && absZ == 0) {
+         return Material.DRAGON_EGG.createBlockData();
       }
-      return depth >= surface ? this.endStone : this.air;
+      if (depth == 2 && absX == 0 && absZ == 0) {
+         return this.bedrock;
+      }
+      if (depth == 3 && absX <= 1 && absZ <= 1) {
+         return Material.END_PORTAL.createBlockData();
+      }
+      if ((depth == 3 || depth == 4) && absX <= 2 && absZ <= 2) {
+         return this.bedrock;
+      }
+      if (depth >= 5) {
+         int surface = this.islandSurfaceDepth(x, z);
+         if (surface >= 0 && depth >= surface) {
+            return this.endStone;
+         }
+      }
+      return this.air;
    }
 
    private int islandSurfaceDepth(int x, int z) {
@@ -404,12 +470,6 @@ public final class EndPortalService implements Listener {
                updates.put(entry.getKey(), entry.getValue());
             }
          }
-
-         long now = System.currentTimeMillis();
-         if (now - session.lastReassertAt >= 2500L) {
-            updates.putAll(next);
-            session.lastReassertAt = now;
-         }
       }
 
       this.sendChanges(player, updates);
@@ -418,10 +478,8 @@ public final class EndPortalService implements Listener {
    }
 
    private void sendChanges(Player player, Map<Location, BlockData> changes) {
-      for(Map.Entry<Location, BlockData> entry : changes.entrySet()) {
-         player.sendBlockChange(entry.getKey(), entry.getValue());
-      }
-
+      if (changes.isEmpty()) return;
+      PlatformCompatibility.sendBlockChanges(player, changes);
    }
 
    private void clearView(Player player) {

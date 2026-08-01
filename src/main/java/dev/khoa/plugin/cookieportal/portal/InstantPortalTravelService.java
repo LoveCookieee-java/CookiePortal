@@ -15,6 +15,9 @@ public final class InstantPortalTravelService implements Listener {
    }
 
    public void start() {
+      if (!this.plugin.settings().enabled()) {
+         return;
+      }
       this.plugin.scheduler().runGlobal(() -> {
          for(World world : this.plugin.getServer().getWorlds()) {
             this.enableInstantTravel(world);
@@ -25,6 +28,9 @@ public final class InstantPortalTravelService implements Listener {
 
    @EventHandler
    public void onWorldLoad(WorldLoadEvent event) {
+      if (!this.plugin.settings().enabled()) {
+         return;
+      }
       World world = event.getWorld();
       this.plugin.scheduler().runGlobal(() -> this.enableInstantTravel(world));
    }

@@ -1,6 +1,15 @@
 # CookiePortal 1.3 - Configuration
 
 # -------------------------------------------------------------------
+# Portal Master Toggles (Immersive Features)
+# -------------------------------------------------------------------
+# Enable or disable immersive Nether portal rendering (enable / disable)
+nether: enable
+
+# Enable or disable immersive End portal rendering & preview (enable / disable)
+the_end: enable
+
+# -------------------------------------------------------------------
 # Render Settings
 # -------------------------------------------------------------------
 render:

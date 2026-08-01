@@ -17,3 +17,7 @@ mvnw.cmd
 # OS files
 .DS_Store
 Thumbs.db
+
+# Documentation / Scratch plans
+fix-plan.md
+
